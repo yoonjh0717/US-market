@@ -121,6 +121,14 @@ th { border-top: 1px solid var(--border); background: var(--panel); color: var(-
 .chip { display: inline-block; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 20px; }
 .chip.up { border-color: var(--up); }
 .chip.down { border-color: var(--down); }
+.news-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.news-item { display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.news-item:hover { background: var(--hover); }
+.news-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.news-link { color: var(--primary); font-weight: 600; text-decoration: none; }
+.news-link:hover { text-decoration: underline; }
+.news-source { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.news-summary { font-size: 12.5px; color: var(--muted); }
 .report-foot { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
 .sources, .disclaimer { font-size: 12px; color: var(--muted); }
 .disclaimer { margin-top: 4px; }
@@ -352,6 +360,7 @@ body.dragging #dropHint { display: flex; }
       koreaNote: str(r.koreaNote),
       koreaSummary: str(r.koreaSummary),
       koreaWatch: arr(r.koreaWatch),
+      news: arr(r.news),
       sources: arr(r.sources)
     };
   }
@@ -635,6 +644,36 @@ body.dragging #dropHint { display: flex; }
     return h + '</tbody></table></div>';
   }
 
+  function safeUrl(u) {
+    var s = str(u).trim();
+    return /^https?:\/\//i.test(s) ? s : '';
+  }
+
+  function newsSection(r) {
+    var list = arr(r.news).filter(function (x) {
+      return x && typeof x === 'object' && (str(x.title).trim() || str(x.url).trim());
+    });
+    if (!list.length) {
+      return '';
+    }
+    var h = '<section><h3>⑥ 주요 뉴스·리포트 <span class="counts">총 ' + list.length + '건</span></h3><ul class="news-list">';
+    list.forEach(function (x) {
+      var href = safeUrl(x.url);
+      var titleHtml = fmt(x.title || x.url);
+      var src = str(x.source).trim();
+      var sum = str(x.summary).trim();
+      h += '<li class="news-item"><div class="news-top">'
+        + (href
+          ? '<a class="news-link" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + titleHtml + ' ↗</a>'
+          : '<strong>' + titleHtml + '</strong>')
+        + (src ? '<span class="news-source">' + fmt(src) + '</span>' : '')
+        + '</div>'
+        + (sum ? '<div class="news-summary">' + fmt(sum) + '</div>' : '')
+        + '</li>';
+    });
+    return h + '</ul></section>';
+  }
+
   function renderReport(r) {
     var idx = state.reports.indexOf(r);
     var older = state.reports[idx + 1] || null;
@@ -690,6 +729,7 @@ body.dragging #dropHint { display: flex; }
         + '</div>';
     }
     h += '</section>';
+    h += newsSection(r);
     h += '<footer class="report-foot">';
     if (r.sources.length) {
       h += '<div class="sources"><strong>출처</strong> ' + r.sources.map(function (s) {
